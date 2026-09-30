@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trenažér ČNB zkoušek</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF1F5; --surface:#FFFFFF; --ink:#16202A; --muted:#5A6877; --line:#D3DBE3;
+  --accent:#1D4E89; --accent-ink:#FFFFFF; --accent-soft:#E2EBF6;
+  --ok:#1E7549; --ok-soft:#DFF2E7; --bad:#B42318; --bad-soft:#FBE6E3; --empty:#DCE3EA;
+  --serif:"Literata", Georgia, "Times New Roman", serif;
+  --sans:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F151C; --surface:#18212B; --ink:#E5ECF2; --muted:#94A3B1; --line:#2B3744;
+    --accent:#7DAEEB; --accent-ink:#0F151C; --accent-soft:#1D2D40;
+    --ok:#5BC68C; --ok-soft:#173326; --bad:#F2887E; --bad-soft:#3A1E1C; --empty:#26313D;
+  }
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:20px 18px 64px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:18px;min-height:40px}
+.back{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:600;color:var(--muted);padding:6px 10px 6px 4px;border-radius:8px}
+.back:hover{color:var(--ink);background:var(--surface)}
+h1{font-family:var(--serif);font-weight:600;font-size:2rem;line-height:1.2;margin:.2em 0 .3em}
+h2{font-size:1.15rem;margin:1.6em 0 .6em}
+.lead{color:var(--muted);max-width:60ch;margin:0 0 1.5em}
+.muted{color:var(--muted)}
+.small{font-size:.875rem}
+
+/* exam list */
+.exams{display:grid;gap:14px}
+.exam{display:grid;grid-template-columns:1fr auto;gap:6px 18px;align-items:center;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:6px;padding:18px 20px}
+.exam:hover{border-color:var(--accent)}
+.exam h3{margin:0;font-family:var(--serif);font-weight:600;font-size:1.3rem;line-height:1.25}
+.exam .meta{grid-column:1/-1;color:var(--muted);font-size:.9rem}
+.exam .pct{font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
+.bar{grid-column:1/-1;display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--empty)}
+.bar i{display:block;height:100%}
+.bar .g{background:var(--ok)} .bar .r{background:var(--bad)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:8px 0 18px;overflow-x:auto}
+.tabs a{padding:10px 14px;text-decoration:none;color:var(--muted);font-weight:600;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tabs a[aria-current="page"]{color:var(--ink);border-color:var(--accent)}
+.stats{display:flex;flex-wrap:wrap;gap:8px 28px;margin:0 0 6px;font-variant-numeric:tabular-nums}
+.stats b{font-size:1.25rem}
+
+/* rows */
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 16px;text-decoration:none;color:inherit}
+.row:hover{border-color:var(--accent)}
+.row .n{font-weight:600}
+.row .c{color:var(--muted);font-size:.875rem;font-variant-numeric:tabular-nums;text-align:right}
+
+/* block tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.tile{display:block;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 10px 8px;text-decoration:none;color:inherit;font-variant-numeric:tabular-nums}
+.tile:hover{border-color:var(--accent)}
+.tile .t{font-weight:600;font-size:.95rem}
+.tile .s{font-size:.78rem;color:var(--muted)}
+.tile .bar{margin-top:6px;height:6px}
+.cases .tile .snip{font-family:var(--serif);font-size:.85rem;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:4px 0 2px}
+.cases{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.note{background:var(--accent-soft);border-radius:6px;padding:12px 16px;margin:0 0 14px;font-size:.92rem}
+
+/* question */
+.qhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px;margin-bottom:10px}
+.qhead .title{font-weight:700}
+.chips{display:flex;gap:4px;overflow-x:auto;padding:4px 2px 10px;margin:0 0 8px;scrollbar-width:thin}
+.chip{flex:0 0 auto;min-width:34px;height:30px;border-radius:5px;border:1px solid var(--line);background:var(--surface);font-size:.8rem;font-variant-numeric:tabular-nums;cursor:pointer;padding:0 6px}
+.chip.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.chip.bad{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.chip.cur{outline:2px solid var(--accent);outline-offset:1px;font-weight:700}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:22px 22px 18px}
+.qid{font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:8px}
+.qtext{font-family:var(--serif);font-size:1.14rem;line-height:1.6;white-space:pre-line;margin:0 0 6px;max-width:68ch}
+.hint{font-size:.88rem;color:var(--accent);font-weight:600;margin:4px 0 12px}
+.opts{display:grid;gap:8px;margin:14px 0 4px}
+.opt{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:6px;padding:11px 14px;cursor:pointer;line-height:1.45;white-space:pre-line}
+.opt:hover:not([disabled]){border-color:var(--accent)}
+.opt .l{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1.5px solid var(--line);font-weight:700;font-size:.85rem;color:var(--muted)}
+.opt.single .l{border-radius:50%}
+.opt.multi .l{border-radius:4px}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.opt[aria-pressed="true"] .l{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.opt[disabled]{cursor:default}
+.opt.is-ok{border-color:var(--ok);background:var(--ok-soft)}
+.opt.is-ok .l{background:var(--ok);border-color:var(--ok);color:#fff}
+.opt.is-bad{border-color:var(--bad);background:var(--bad-soft)}
+.opt.is-bad .l{background:var(--bad);border-color:var(--bad);color:#fff}
+.opt.missed{border-style:dashed;border-color:var(--ok)}
+.verdict{font-weight:700;margin:14px 0 4px}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
+.expl{border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 16px;border-radius:0 6px 6px 0;margin-top:10px;font-size:.95rem;white-space:pre-line;max-width:72ch}
+.expl b{display:block;margin-bottom:4px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:6px;padding:10px 16px;font-weight:600;cursor:pointer;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+.btn:hover:not([disabled]){border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.spacer{flex:1}
+.last{font-size:.82rem}
+.last.ok{color:var(--ok)} .last.bad{color:var(--bad)}
+
+/* case study */
+.case{font-family:var(--serif);font-size:1.05rem;line-height:1.65;white-space:pre-line;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:6px;padding:18px 20px;margin-bottom:18px}
+.case h2{font-family:var(--sans);margin:0 0 8px;font-size:1rem;color:var(--accent)}
+.cq{margin-bottom:14px}
+.cq .num{font-weight:700;color:var(--muted);font-size:.85rem;margin-bottom:4px}
+details.ctx{margin-bottom:14px}
+details.ctx summary{cursor:pointer;font-weight:600;color:var(--accent);padding:6px 0}
+details.ctx .case{margin:6px 0 0}
+.score{font-size:1.2rem;font-weight:700;margin:6px 0}
+
+/* settings */
+.settings{margin-top:40px;border-top:1px solid var(--line);padding-top:10px}
+.settings label{display:flex;gap:10px;align-items:center;margin:10px 0;cursor:pointer}
+.settings input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:6px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:6px;padding:24px;text-align:center}
+.kbd{font-size:.8rem;color:var(--muted);margin-top:14px}
+@media (max-width:560px){
+  h1{font-size:1.6rem}
+  .card{padding:16px 14px}
+  .qtext{font-size:1.05rem}
+  .wrap{padding:14px 12px 56px}
+  .actions .btn{flex:1 1 auto;justify-content:center}
+  .actions .spacer{display:none}
+  .kbd{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.opt{user-select:text;-webkit-user-select:text}
+.opt[aria-disabled="true"]{cursor:default}
+.opt[aria-disabled="true"]:hover{border-color:inherit}
+.top .dictlink{margin-left:auto}
+.dictlink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:600;color:var(--accent);padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);white-space:nowrap}
+.dictlink:hover{border-color:var(--accent)}
+.homehead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+/* selection button */
+#selbtn{position:absolute;z-index:40;display:none;background:var(--ink);color:var(--bg);border:0;border-radius:6px;padding:8px 12px;font-weight:700;font-size:.9rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#selbtn::before{content:"";position:absolute;left:50%;top:-6px;margin-left:-6px;border:6px solid transparent;border-top:0;border-bottom-color:var(--ink)}
+/* modal */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,16,22,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+@media (min-width:600px){.modal{align-items:center}}
+.modal .box{background:var(--surface);color:var(--ink);border-radius:10px;width:100%;max-width:520px;padding:20px;max-height:calc(100% - 20px);overflow:auto;margin-bottom:env(safe-area-inset-bottom,0px)}
+.modal h2{margin:0 0 12px}
+.field{display:block;margin:0 0 12px}
+.field span{display:block;font-size:.85rem;font-weight:600;color:var(--muted);margin-bottom:4px}
+.field input,.field textarea,.field select,.search{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:6px;padding:9px 11px}
+.field textarea{min-height:70px;resize:vertical}
+.field input:focus,.field textarea:focus,.search:focus{outline:none;border-color:var(--accent)}
+.ctxline{font-family:var(--serif);font-size:.9rem;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin:0 0 12px}
+.ext{font-size:.85rem;display:flex;flex-wrap:wrap;gap:4px 14px;margin:-4px 0 12px}
+/* dictionary list */
+.words{display:grid;gap:8px;margin-top:12px}
+.word{display:grid;grid-template-columns:1fr auto;gap:2px 12px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.word .cs{font-weight:700;font-family:var(--serif);font-size:1.08rem}
+.word .tr{grid-column:1}
+.word .ex{grid-column:1/-1;font-size:.84rem;color:var(--muted);font-family:var(--serif);margin-top:4px}
+.word .btns{grid-row:1/3;grid-column:2;display:flex;gap:4px;align-items:start}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:.85rem}
+.iconbtn:hover{border-color:var(--accent)}
+.known{font-size:.75rem;color:var(--ok);font-weight:600}
+/* highlight of saved words */
+mark.dw{background:none;color:inherit;border-bottom:2px dotted var(--accent);position:relative;cursor:help}
+mark.dw:hover::after,mark.dw:focus::after{content:attr(data-tr);position:absolute;left:0;bottom:calc(100% + 6px);z-index:30;background:var(--ink);color:var(--bg);font-family:var(--sans);font-size:.85rem;font-weight:600;line-height:1.35;padding:6px 9px;border-radius:5px;width:max-content;max-width:260px;white-space:normal;pointer-events:none}
+mark.dw:focus{outline:none}
+/* flashcards */
+.flash{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:34px 22px;text-align:center;min-height:220px;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.flash .cs{font-family:var(--serif);font-size:1.7rem;font-weight:600;line-height:1.25}
+.flash .tr{font-size:1.25rem;color:var(--accent);font-weight:600}
+.flash .ex{font-family:var(--serif);font-size:.9rem;color:var(--muted);max-width:60ch;margin:0 auto}
+</style>
+</head>
+<body>
+<main class="wrap" id="app" aria-live="polite"></main>
+<div class="toast" id="toast" role="status"></div>
+<button id="selbtn" type="button">+ Do slovníku</button>
+<script>
+(function(){
+'use strict';
+var EXAMS = [
+  {key:'poj', title:'Životní pojištění a pojištění velkých pojistných rizik', short:'Pojištění', s:1112, m:398, c:94, cq:470},
+  {key:'inv', title:'Investiční zprostředkovatel', short:'Investice', s:544, m:197, c:50, cq:250},
+  {key:'uve', title:'Úvěry – souhrnná zkouška pro všechny skupiny úvěrů', short:'Úvěry', s:699, m:179, c:69, cq:345},
+  {key:'pen', title:'Penze', short:'Penze', s:516, m:0, c:10, cq:50}
+];
+var BLOCK = 25;
+var TYPE_NAMES = {s:'Jedna správná odpověď', m:'Více správných odpovědí', c:'Případová studie'};
+var LETTERS = 'ABCDEF';
+var STORE_KEY = 'cnb-trenazer-v1';
+var app = document.getElementById('app');
+var keyHandler = null;
+
+/* ---------- storage ---------- */
+var state = load();
+function blank(){ return {v:1, settings:{shuffle:false}, ex:{}}; }
+function load(){
+  try{
+    var s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if(s && s.v===1){ s.ex = s.ex||{}; s.settings = s.settings||{shuffle:false}; return s; }
+  }catch(e){}
+  return blank();
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch(e){ toast('Postup se nepodařilo uložit – prohlížeč blokuje úložiště.'); }
+}
+function exState(k){ if(!state.ex[k]) state.ex[k] = {r:{}, pos:{}}; return state.ex[k]; }
+// r[qid] = [attempts, wrong, lastOk(1/0)]
+function record(k, qid, ok){
+  var r = exState(k).r, x = r[qid] || [0,0,0];
+  x[0]++; if(!ok) x[1]++; x[2] = ok?1:0; r[qid] = x; save();
+}
+
+/* ---------- data loading ---------- */
+var loading = {};
+function getData(k){
+  if(window.CNB_DATA && window.CNB_DATA[k]) return Promise.resolve(window.CNB_DATA[k]);
+  if(loading[k]) return loading[k];
+  loading[k] = new Promise(function(res, rej){
+    var s = document.createElement('script');
+    s.src = 'data/' + k + '.js';
+    s.onload = function(){ window.CNB_DATA && window.CNB_DATA[k] ? res(window.CNB_DATA[k]) : rej(); };
+    s.onerror = function(){ delete loading[k]; rej(); };
+    document.head.appendChild(s);
+  });
+  return loading[k];
+}
+
+/* ---------- helpers ---------- */
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function examMeta(k){ for(var i=0;i<EXAMS.length;i++) if(EXAMS[i].key===k) return EXAMS[i]; return null; }
+function stat(k, ids){
+  var r = exState(k).r, a=0, g=0;
+  for(var i=0;i<ids.length;i++){ var x = r[ids[i]]; if(x){ a++; if(x[2]) g++; } }
+  return {n:ids.length, a:a, g:g, b:a-g};
+}
+function bar(s){
+  if(!s.n) return '<div class="bar"></div>';
+  return '<div class="bar" aria-hidden="true"><i class="g" style="width:'+(s.g/s.n*100)+'%"></i><i class="r" style="width:'+(s.b/s.n*100)+'%"></i></div>';
+}
+function toast(msg){
+  var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+function sameSet(a, b){ if(a.length!==b.length) return false; var x=a.slice().sort(), y=b.slice().sort(); for(var i=0;i<x.length;i++) if(x[i]!==y[i]) return false; return true; }
+function perm(n){ var p=[]; for(var i=0;i<n;i++) p.push(i); if(state.settings.shuffle){ for(var j=n-1;j>0;j--){ var k=Math.floor(Math.random()*(j+1)); var t=p[j]; p[j]=p[k]; p[k]=t; } } return p; }
+function cp(a){ return a ? a.slice() : null; }
+function plural(n, one, few, many){ return n===1?one:(n>=2&&n<=4?few:many); }
+
+/* ---------- sets ---------- */
+var errSnapshot = {};
+function typeIdx(d, t){ var out=[]; d.questions.forEach(function(q,i){ if(q.t===t) out.push(i); }); return out; }
+function errList(k, d, onlyLastWrong){
+  var r = exState(k).r, out=[];
+  d.questions.forEach(function(q,i){ var x=r[q.id]; if(x && x[1]>0 && (!onlyLastWrong || !x[2])) out.push(i); });
+  out.sort(function(a,b){ var x=r[d.questions[a].id], y=r[d.questions[b].id]; return (y[1]-x[1]) || (x[2]-y[2]) || (a-b); });
+  return out;
+}
+function getSet(k, d, key){
+  var m;
+  if((m = /^t-(\d+)$/.exec(key))){
+    var t = +m[1], list=[]; d.questions.forEach(function(q,i){ if(q.tp===t) list.push(i); });
+    return {title:d.topics[t], list:list, back:'topics'};
+  }
+  if((m = /^([sm])-(\d+)$/.exec(key))){
+    var all = typeIdx(d, m[1]), b = +m[2], from = b*BLOCK, to = Math.min(all.length, from+BLOCK);
+    return {title:TYPE_NAMES[m[1]]+', blok '+(b+1)+' ('+(from+1)+'–'+to+')', list:all.slice(from,to), back:'types',
+      prev: b>0 ? m[1]+'-'+(b-1) : null, next: to<all.length ? m[1]+'-'+(b+1) : null};
+  }
+  if(key==='err' || key==='err-last'){
+    var sk = k+key;
+    if(!errSnapshot[sk]) errSnapshot[sk] = errList(k, d, key==='err-last');
+    return {title: key==='err' ? 'Opakování chyb' : 'Opakování chyb – naposledy špatně', list:errSnapshot[sk], back:'errors'};
+  }
+  return null;
+}
+
+/* ---------- router ---------- */
+window.addEventListener('hashchange', route);
+function route(){
+  keyHandler = null;
+  var h = location.hash.replace(/^#\/?/, '').split('/');
+  window.scrollTo(0,0);
+  if(!h[0]) return viewHome();
+  if(h[0]==='slovnik') return h[1]==='karticky' ? viewFlash() : viewDict();
+  if(h[0]==='x' && examMeta(h[1])){
+    var k = h[1];
+    app.innerHTML = '<p class="muted">Načítám otázky…</p>';
+    getData(k).then(function(d){
+      if(h[2]==='set' && h[3]) return viewSet(k, d, h[3], h[4]!=null ? +h[4] : null);
+      if(h[2]==='case' && h[3]!=null) return viewCase(k, d, +h[3]);
+      viewExam(k, d, h[2] || 'topics');
+    }, function(){
+      app.innerHTML = '<div class="empty"><p>Soubor s otázkami <b>data/'+esc(k)+'.js</b> se nepodařilo načíst. Zkontrolujte, že složka <b>data</b> leží vedle souboru index.html.</p><a class="btn" href="#/">Zpět na výběr zkoušky</a></div>';
+    });
+    return;
+  }
+  location.hash = '#/';
+}
+
+/* ---------- home ---------- */
+function viewHome(){
+  var html = '<div class="homehead"><h1>Trenažér zkoušek ČNB</h1>'+dictLinkHtml()+'</div><p class="lead">Vyberte zkoušku. Postup se ukládá v tomto prohlížeči, takže můžete kdykoli pokračovat.</p><div class="exams">';
+  EXAMS.forEach(function(e){
+    var total = e.s+e.m+e.cq, r = exState(e.key).r, a=0, g=0;
+    for(var id in r){ a++; if(r[id][2]) g++; }
+    var s = {n:total, a:a, g:g, b:a-g};
+    var parts = [e.s+' s jednou odpovědí'];
+    if(e.m) parts.push(e.m+' s více odpověďmi');
+    parts.push(e.c+' případových studií');
+    html += '<a class="exam" href="#/x/'+e.key+'"><h3>'+esc(e.title)+'</h3><span class="pct">'+(a?Math.round(g/total*100):0)+' %</span>'+
+      bar(s)+'<span class="meta">'+total+' otázek: '+parts.join(', ')+'. Zodpovězeno '+a+', správně '+g+'.</span></a>';
+  });
+  html += '</div>';
+  html += '<section class="settings"><h2>Nastavení a postup</h2>'+
+    '<label><input type="checkbox" id="shuf"'+(state.settings.shuffle?' checked':'')+'> Míchat pořadí odpovědí (jako u skutečné zkoušky)</label>'+
+    '<label class="field" style="max-width:320px;display:block;cursor:default"><span>Jazyk překladu ve slovníku</span><select id="lang">'+
+      LANGS.map(function(l){ return '<option value="'+l[0]+'"'+(tl()===l[0]?' selected':'')+'>'+l[1]+'</option>'; }).join('')+'</select></label>'+
+    '<div class="actions"><button class="btn" id="exp">Stáhnout zálohu postupu</button>'+
+    '<label class="btn" style="margin:0">Nahrát zálohu<input type="file" id="imp" accept="application/json,.json" hidden></label>'+
+    '<button class="btn danger" id="resetAll">Smazat veškerý postup</button></div>'+
+    '<p class="small muted">Postup je uložený jen v tomto prohlížeči a zařízení. Záloha se hodí při přechodu na jiný počítač nebo telefon.</p></section>';
+  app.innerHTML = html;
+  document.getElementById('shuf').onchange = function(){ state.settings.shuffle = this.checked; save(); };
+  document.getElementById('lang').onchange = function(){ state.settings.lang = this.value; save(); };
+  document.getElementById('exp').onclick = exportProgress;
+  document.getElementById('imp').onchange = importProgress;
+  document.getElementById('resetAll').onclick = function(){
+    if(confirm('Opravdu smazat postup ve všech čtyřech zkouškách? Slovník zůstane zachován. Tuto akci nelze vrátit.')){
+      var keepDict = state.dict, keepSet = state.settings; state = blank(); state.dict = keepDict; state.settings = keepSet;
+      errSnapshot = {}; save(); viewHome(); toast('Postup byl smazán. Slovník zůstal zachován.');
+    }
+  };
+}
+function exportProgress(){
+  var blob = new Blob([JSON.stringify(state)], {type:'application/json'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'cnb-trenazer-postup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+function importProgress(ev){
+  var f = ev.target.files[0]; if(!f) return;
+  var fr = new FileReader();
+  fr.onload = function(){
+    try{
+      var s = JSON.parse(fr.result);
+      if(!s || s.v!==1 || typeof s.ex!=='object') throw 0;
+      if(!confirm('Nahrát zálohu? Současný postup v tomto prohlížeči bude nahrazen.')) return;
+      state = s; state.settings = state.settings||{shuffle:false}; errSnapshot = {}; save(); viewHome(); toast('Záloha byla nahrána.');
+    }catch(e){ toast('Tento soubor není záloha trenažéru.'); }
+  };
+  fr.readAsText(f);
+}
+
+/* ---------- exam overview ---------- */
+function viewExam(k, d, tab){
+  var e = examMeta(k), allIds = d.questions.map(function(q){ return q.id; }), s = stat(k, allIds);
+  var html = '<div class="top"><a class="back" href="#/">‹ Všechny zkoušky</a></div>'+
+    '<h1>'+esc(e.title)+'</h1>'+
+    '<div class="stats"><span><b>'+s.a+'</b> / '+s.n+' zodpovězeno</span><span><b>'+(s.a?Math.round(s.g/s.a*100):0)+' %</b> úspěšnost</span><span><b>'+s.b+'</b> naposledy špatně</span></div>'+
+    '<div style="margin:8px 0 4px">'+bar(s)+'</div>'+
+    '<nav class="tabs">'+
+      tabLink(k,'topics','Podle témat',tab)+tabLink(k,'types','Podle typu otázek',tab)+tabLink(k,'errors','Opakovat chyby',tab)+
+    '</nav>';
+  if(tab==='types') html += typesTab(k, d);
+  else if(tab==='errors') html += errorsTab(k, d);
+  else html += topicsTab(k, d);
+  html += '<section class="settings"><button class="btn danger" id="resetEx">Smazat postup v této zkoušce</button></section>';
+  app.innerHTML = html;
+  document.getElementById('resetEx').onclick = function(){
+    if(confirm('Opravdu smazat postup ve zkoušce „'+e.short+'“?')){
+      delete state.ex[k]; delete errSnapshot[k+'err']; delete errSnapshot[k+'err-last']; save(); viewExam(k, d, tab); toast('Postup v této zkoušce byl smazán.');
+    }
+  };
+}
+function tabLink(k, id, label, cur){ return '<a href="#/x/'+k+'/'+id+'"'+(cur===id?' aria-current="page"':'')+'>'+label+'</a>'; }
+function topicsTab(k, d){
+  var html = '<p class="note">Témata jsou přiřazena automaticky podle obsahu otázek, proto může být občas některá otázka v příbuzném tématu. Případové studie najdete v části Podle typu otázek.</p><div class="rows">';
+  d.topics.forEach(function(t, i){
+    var ids = []; d.questions.forEach(function(q){ if(q.tp===i) ids.push(q.id); });
+    var s = stat(k, ids);
+    html += '<a class="row" href="#/x/'+k+'/set/t-'+i+'"><span class="n">'+esc(t)+'</span><span class="c">'+s.a+' / '+s.n+'</span>'+bar(s)+'</a>';
+  });
+  return html + '</div>';
+}
+function typesTab(k, d){
+  var html = '';
+  ['s','m'].forEach(function(t){
+    var all = typeIdx(d, t);
+    html += '<h2>'+TYPE_NAMES[t]+' <span class="muted small">('+all.length+' otázek)</span></h2>';
+    if(!all.length){ html += '<p class="note">V této zkoušce nejsou otázky s více správnými odpověďmi.</p>'; return; }
+    html += '<div class="tiles">';
+    for(var b=0; b*BLOCK<all.length; b++){
+      var sl = all.slice(b*BLOCK, (b+1)*BLOCK), s = stat(k, sl.map(function(i){ return d.questions[i].id; }));
+      html += '<a class="tile" href="#/x/'+k+'/set/'+t+'-'+b+'"><div class="t">Blok '+(b+1)+'</div><div class="s">otázky '+(b*BLOCK+1)+'–'+(b*BLOCK+sl.length)+'<br>'+s.g+' správně z '+s.n+'</div>'+bar(s)+'</a>';
+    }
+    html += '</div>';
+  });
+  html += '<h2>'+TYPE_NAMES.c+' <span class="muted small">('+d.cases.length+' studií, vždy 5 otázek)</span></h2><div class="tiles cases">';
+  d.cases.forEach(function(c, i){
+    var s = stat(k, c.qs.map(function(qi){ return d.questions[qi].id; }));
+    html += '<a class="tile" href="#/x/'+k+'/case/'+i+'"><div class="t">Studie '+(i+1)+'</div><div class="snip">'+esc(c.text.slice(0,160))+'</div><div class="s">'+s.g+' / 5 správně</div>'+bar(s)+'</a>';
+  });
+  return html + '</div>';
+}
+function errorsTab(k, d){
+  var all = errList(k, d, false), last = errList(k, d, true), r = exState(k).r;
+  if(!all.length) return '<div class="empty"><p>Zatím tu nic není. Otázky, ve kterých uděláte chybu, se sem uloží automaticky, seřazené podle počtu chyb.</p></div>';
+  var html = '<p class="lead">Otázky seřazené podle toho, kolikrát jste v nich chybovala.</p><div class="actions" style="margin:0 0 18px">'+
+    '<a class="btn primary" href="#/x/'+k+'/set/err" data-reset="err">Procvičit všechny s chybou ('+all.length+')</a>'+
+    (last.length ? '<a class="btn" href="#/x/'+k+'/set/err-last" data-reset="err-last">Jen naposledy špatně ('+last.length+')</a>' : '')+
+    '</div><div class="rows">';
+  all.slice(0, 40).forEach(function(qi, pos){
+    var q = d.questions[qi], x = r[q.id];
+    html += '<a class="row" href="#/x/'+k+'/set/err/'+pos+'" data-reset="err"><span>'+esc(q.q.length>150 ? q.q.slice(0,150)+'…' : q.q)+'</span><span class="c">'+x[1]+'× chyba<br>'+(x[2]?'<span class="last ok">naposledy správně</span>':'<span class="last bad">naposledy špatně</span>')+'</span></a>';
+  });
+  if(all.length>40) html += '<p class="muted small">…a dalších '+(all.length-40)+' otázek.</p>';
+  setTimeout(function(){
+    app.querySelectorAll('[data-reset]').forEach(function(a){ a.addEventListener('click', function(){ delete errSnapshot[k+a.getAttribute('data-reset')]; }); });
+  });
+  return html + '</div>';
+}
+
+/* ---------- question set ---------- */
+function viewSet(k, d, key, startPos){
+  var set = getSet(k, d, key);
+  if(!set){ location.hash = '#/x/'+k; return; }
+  var ex = exState(k);
+  if(!set.list.length){
+    app.innerHTML = '<div class="top"><a class="back" href="#/x/'+k+'/'+set.back+'">‹ Zpět</a></div><div class="empty"><p>V této sadě nejsou žádné otázky.</p></div>';
+    return;
+  }
+  var pos = startPos!=null ? startPos : (ex.pos[key] || 0);
+  if(pos >= set.list.length || pos < 0) pos = 0;
+  var cur = {sel:[], checked:false, perm:null, prev:cp(ex.r[d.questions[set.list[pos]].id])};
+
+  function go(p){
+    if(p<0 || p>=set.list.length) return;
+    pos = p; ex.pos[key] = p; save();
+    cur = {sel:[], checked:false, perm:null, prev:cp(ex.r[d.questions[set.list[p]].id])};
+    render(); window.scrollTo(0,0);
+  }
+  function render(){
+    var qi = set.list[pos], q = d.questions[qi], multi = q.c.length>1 || q.t==='m';
+    if(!cur.perm) cur.perm = perm(q.o.length);
+    var x = cur.prev;
+    var chips = set.list.map(function(i, n){
+      var y = ex.r[d.questions[i].id];
+      return '<button class="chip'+(y?(y[2]?' ok':' bad'):'')+(n===pos?' cur':'')+'" data-go="'+n+'" aria-label="Otázka '+(n+1)+'">'+(n+1)+'</button>';
+    }).join('');
+    var html = '<div class="top"><a class="back" href="#/x/'+k+'/'+set.back+'">‹ '+esc(examMeta(k).short)+'</a></div>'+
+      '<div class="qhead"><span class="title">'+esc(set.title)+'</span><span class="muted small">'+(pos+1)+' / '+set.list.length+'</span></div>'+
+      '<div class="chips" id="chips">'+chips+'</div>';
+    if(q.t==='c'){
+      var c = d.cases[q.k];
+      html += '<details class="ctx" open><summary>Zadání případové studie</summary><div class="case">'+esc(c.text)+'</div></details>';
+    }
+    html += '<div class="card"><div class="qid"><span>Otázka č. '+esc(q.id)+'</span><span>'+TYPE_NAMES[q.t]+'</span>'+
+      (x && !cur.checked ? '<span class="last '+(x[2]?'ok':'bad')+'">Minule '+(x[2]?'správně':'špatně')+(x[1]?', chyb celkem '+x[1]:'')+'</span>' : '')+'</div>'+
+      '<p class="qtext">'+esc(q.q)+'</p>'+
+      (q.t==='m' ? '<p class="hint">Vyberte všechny správné odpovědi.</p>' : '')+
+      optsHtml(q, cur, multi, 'o')+
+      feedbackHtml(q, cur)+
+      '<div class="actions">'+
+        '<button class="btn" id="prev"'+(pos===0?' disabled':'')+'>‹ Předchozí</button>'+
+        (cur.checked ? '<button class="btn" id="retry">Zkusit znovu</button>' : '<button class="btn primary" id="check"'+(cur.sel.length?'':' disabled')+'>Zkontrolovat</button>')+
+        '<span class="spacer"></span>'+
+        (pos<set.list.length-1 ? '<button class="btn'+(cur.checked?' primary':'')+'" id="next">Další ›</button>'
+          : (set.next ? '<a class="btn'+(cur.checked?' primary':'')+'" href="#/x/'+k+'/set/'+set.next+'">Další blok ›</a>' : '<a class="btn" href="#/x/'+k+'/'+set.back+'">Hotovo</a>'))+
+      '</div><p class="kbd">Klávesy: A–D vybere odpověď, Enter zkontroluje nebo přejde dál, šipky listují.</p></div>';
+    app.innerHTML = html;
+    var chipEl = app.querySelector('.chip.cur'); if(chipEl) chipEl.scrollIntoView({block:'nearest', inline:'center'});
+    bindOpts(app, q, cur, multi, render);
+    app.querySelectorAll('[data-go]').forEach(function(b){ b.onclick = function(){ go(+b.getAttribute('data-go')); }; });
+    var el;
+    if((el = document.getElementById('prev'))) el.onclick = function(){ go(pos-1); };
+    if((el = document.getElementById('next'))) el.onclick = function(){ go(pos+1); };
+    if((el = document.getElementById('retry'))) el.onclick = function(){ cur = {sel:[], checked:false, perm:null, prev:cp(ex.r[q.id])}; render(); };
+    if((el = document.getElementById('check'))) el.onclick = check;
+  }
+  function check(){
+    if(!cur.sel.length || cur.checked) return;
+    var q = d.questions[set.list[pos]];
+    cur.checked = true; cur.ok = sameSet(cur.sel, q.c);
+    record(k, q.id, cur.ok);
+    render();
+    var f = app.querySelector('.verdict'); if(f) f.scrollIntoView({block:'nearest'});
+  }
+  keyHandler = function(ev){
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName) || ev.metaKey || ev.ctrlKey || ev.altKey || document.querySelector('.modal')) return;
+    var q = d.questions[set.list[pos]], key = ev.key.toUpperCase(), li = LETTERS.indexOf(key);
+    if(li<0 && /^[1-6]$/.test(ev.key)) li = +ev.key-1;
+    if(li>=0 && li<q.o.length && !cur.checked){ toggleSel(q, cur, cur.perm[li], q.c.length>1 || q.t==='m'); render(); ev.preventDefault(); }
+    else if(ev.key==='Enter' && document.activeElement && document.activeElement.tagName!=='A'){
+      if(document.activeElement.tagName==='BUTTON' && !document.activeElement.classList.contains('opt')) return;
+      ev.preventDefault(); if(!cur.checked) check(); else if(pos<set.list.length-1) go(pos+1);
+    }
+    else if(ev.key==='ArrowRight'){ go(pos+1); }
+    else if(ev.key==='ArrowLeft'){ go(pos-1); }
+  };
+  render();
+}
+
+/* shared option rendering */
+function toggleSel(q, cur, orig, multi){
+  var i = cur.sel.indexOf(orig);
+  if(multi){ if(i>=0) cur.sel.splice(i,1); else cur.sel.push(orig); }
+  else cur.sel = [orig];
+}
+function optsHtml(q, cur, multi, prefix){
+  var h = '<div class="opts" role="group">';
+  cur.perm.forEach(function(orig, n){
+    var chosen = cur.sel.indexOf(orig)>=0, right = q.c.indexOf(orig)>=0, cls = 'opt '+(multi?'multi':'single');
+    if(cur.checked){ if(chosen && right) cls += ' is-ok'; else if(chosen) cls += ' is-bad'; else if(right) cls += ' is-ok missed'; }
+    h += '<div role="button" tabindex="0" class="'+cls+'" data-'+prefix+'="'+orig+'" aria-pressed="'+chosen+'"'+(cur.checked?' aria-disabled="true"':'')+'><span class="l">'+LETTERS[n]+'</span><span class="tx">'+esc(q.o[orig])+'</span></div>';
+  });
+  return h + '</div>';
+}
+function feedbackHtml(q, cur){
+  if(!cur.checked) return '';
+  var letters = cur.perm.map(function(o, n){ return q.c.indexOf(o)>=0 ? LETTERS[n] : null; }).filter(Boolean).join(', ');
+  return '<p class="verdict '+(cur.ok?'ok':'bad')+'">'+(cur.ok ? 'Správně.' : 'Špatně. '+(q.c.length>1?'Správné odpovědi':'Správná odpověď')+': '+letters+'.')+'</p>'+
+    (q.e ? '<div class="expl"><b>Odůvodnění</b>'+esc(q.e)+'</div>' : '');
+}
+function bindOpts(root, q, cur, multi, rerender, prefix){
+  prefix = prefix || 'o';
+  root.querySelectorAll('[data-'+prefix+']').forEach(function(b){
+    b.onclick = function(){
+      if(cur.checked) return;
+      var sel = window.getSelection && window.getSelection();
+      if(sel && sel.toString().trim() && b.contains(sel.anchorNode)) return; // user is selecting text for dictionary
+      toggleSel(q, cur, +b.getAttribute('data-'+prefix), multi); rerender();
+      var again = root.querySelector('[data-'+prefix+'="'+b.getAttribute('data-'+prefix)+'"]'); if(again) again.focus({preventScroll:true});
+    };
+    b.onkeydown = function(ev){ if(ev.key===' '){ ev.preventDefault(); b.onclick(); } };
+  });
+}
+
+/* ---------- dictionary ---------- */
+var LANGS = [['ru','ruština'],['uk','ukrajinština'],['en','angličtina']];
+function tl(){ return state.settings.lang || 'ru'; }
+function dict(){ if(!state.dict) state.dict = []; return state.dict; }
+function dictLinkHtml(){ return '<a class="dictlink" href="#/slovnik">Slovník ('+dict().length+')</a>'; }
+function normTerm(t){ return t.replace(/\s+/g,' ').replace(/^[\s.,;:!?„“"'()«»–-]+|[\s.,;:!?„“"'()«»–-]+$/g,'').trim(); }
+
+/* Translation: Google Translate public endpoint first, MyMemory as fallback. No API key needed. */
+function translate(text, lang){
+  var q = encodeURIComponent(text);
+  function viaGoogle(){
+    return fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=cs&tl='+lang+'&dt=t&q='+q)
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(j){ var t = (j[0]||[]).map(function(x){ return x[0]; }).join('').trim(); if(!t) throw 0; return t; });
+  }
+  function viaMyMemory(){
+    return fetch('https://api.mymemory.translated.net/get?q='+q+'&langpair=cs|'+lang)
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(j){ var t = j && j.responseData && j.responseData.translatedText; if(!t || j.responseStatus!=200 || /MYMEMORY WARNING/i.test(t)) throw 0; return t.trim(); });
+  }
+  return viaGoogle().catch(viaMyMemory);
+}
+function extLinks(term, lang){
+  var e = encodeURIComponent(term), seznam = {ru:'cesky_rusky', en:'cesky_anglicky', uk:null}[lang];
+  return '<div class="ext"><a href="https://translate.google.com/?sl=cs&tl='+lang+'&text='+e+'" target="_blank" rel="noopener">Google Překladač</a>'+
+    (seznam ? '<a href="https://slovnik.seznam.cz/preklad/'+seznam+'/'+e+'" target="_blank" rel="noopener">Slovník Seznam</a>' : '')+
+    '<a href="https://www.deepl.com/translator#cs/'+lang+'/'+e+'" target="_blank" rel="noopener">DeepL</a></div>';
+}
+
+/* floating "add to dictionary" button on text selection */
+var selBtn = document.getElementById('selbtn'), selInfo = null, selTimer = null;
+function onSelection(){
+  var sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount || document.querySelector('.modal')){ hideSel(); return; }
+  var text = normTerm(sel.toString());
+  var node = sel.anchorNode && (sel.anchorNode.nodeType===1 ? sel.anchorNode : sel.anchorNode.parentNode);
+  if(!text || text.length>200 || !node || !app.contains(node) || node.closest('input,textarea,.dictpage')){ hideSel(); return; }
+  var rect = sel.getRangeAt(0).getBoundingClientRect();
+  if(!rect.width && !rect.height){ hideSel(); return; }
+  var ctxEl = node.closest('.qtext,.opt,.case,.expl,.row,.snip');
+  var ctx = ctxEl ? ctxEl.textContent.replace(/\s+/g,' ').trim() : '';
+  ctx = sentenceAround(ctx, text);
+  var h = location.hash.split('/');
+  selInfo = {text:text, ctx:ctx, ex:h[1]==='x' ? h[2] : null};
+  selBtn.style.display = 'block';
+  var bw = selBtn.offsetWidth;
+  var left = Math.max(8, Math.min(window.scrollX + rect.left + rect.width/2 - bw/2, window.scrollX + document.documentElement.clientWidth - bw - 8));
+  selBtn.style.left = left + 'px';
+  selBtn.style.top = (window.scrollY + rect.bottom + 10) + 'px';
+}
+function sentenceAround(text, term){
+  var i = text.toLowerCase().indexOf(term.toLowerCase());
+  if(i<0) return text.slice(0,220);
+  var dot = text.lastIndexOf('. ', i), start = Math.max(dot<0 ? 0 : dot+2, i-160), end = text.indexOf('. ', i+term.length);
+  end = end<0 ? Math.min(text.length, i+term.length+160) : Math.min(end+1, i+term.length+160);
+  return (start>0?'…':'') + text.slice(start, end).trim() + (end<text.length?'…':'');
+}
+function hideSel(){ selBtn.style.display = 'none'; }
+document.addEventListener('selectionchange', function(){ clearTimeout(selTimer); selTimer = setTimeout(onSelection, 250); });
+window.addEventListener('resize', hideSel);
+selBtn.addEventListener('mousedown', function(e){ e.preventDefault(); }); // keep selection
+selBtn.addEventListener('click', function(){
+  if(!selInfo) return;
+  var info = selInfo; hideSel();
+  if(window.getSelection) window.getSelection().removeAllRanges();
+  openWordDialog({cs:info.text, ctx:info.ctx, ex:info.ex});
+});
+
+function openWordDialog(entry, onSaved){
+  var lang = entry.lang || tl(), isNew = !entry.id;
+  var existing = isNew && dict().filter(function(w){ return w.cs.toLowerCase()===entry.cs.toLowerCase(); })[0];
+  if(existing){ entry = existing; isNew = false; }
+  var m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = '<div class="box" role="dialog" aria-modal="true" aria-labelledby="dlgT"><h2 id="dlgT">'+(isNew?'Přidat do slovníku':'Upravit slovíčko')+'</h2>'+
+    '<label class="field"><span>Česky</span><input id="wCs" value="'+esc(entry.cs)+'"></label>'+
+    '<label class="field"><span>Překlad ('+esc(LANGS.filter(function(l){return l[0]===lang;})[0][1])+')</span><textarea id="wTr" placeholder="Načítám překlad…">'+esc(entry.tr||'')+'</textarea></label>'+
+    '<div id="wExt">'+extLinks(entry.cs, lang)+'</div>'+
+    (entry.ctx ? '<p class="ctxline">'+esc(entry.ctx)+'</p>' : '')+
+    '<div class="actions"><button class="btn" id="wRe" type="button">Přeložit znovu</button><span class="spacer"></span><button class="btn" id="wCancel" type="button">Zrušit</button><button class="btn primary" id="wSave" type="button">Uložit</button></div></div>';
+  document.body.appendChild(m);
+  var cs = m.querySelector('#wCs'), tr = m.querySelector('#wTr');
+  function run(){
+    var term = normTerm(cs.value); if(!term) return;
+    tr.value = ''; tr.placeholder = 'Načítám překlad…';
+    m.querySelector('#wExt').innerHTML = extLinks(term, lang);
+    translate(term, lang).then(function(t){ if(!tr.value) tr.value = t; },
+      function(){ tr.placeholder = 'Automatický překlad se nepodařil. Napište překlad sami nebo použijte odkazy výše.'; });
+  }
+  function close(){ m.remove(); document.removeEventListener('keydown', onKey, true); }
+  function onKey(e){ if(e.key==='Escape'){ e.stopPropagation(); close(); } }
+  document.addEventListener('keydown', onKey, true);
+  m.addEventListener('click', function(e){ if(e.target===m) close(); });
+  m.querySelector('#wCancel').onclick = close;
+  m.querySelector('#wRe').onclick = run;
+  m.querySelector('#wSave').onclick = function(){
+    var term = normTerm(cs.value), t = tr.value.trim();
+    if(!term){ cs.focus(); return; }
+    if(isNew){ dict().unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), cs:term, tr:t, lang:lang, ctx:entry.ctx||'', ex:entry.ex||null, t:Date.now(), k:0}); }
+    else { entry.cs = term; entry.tr = t; }
+    save(); close(); toast(isNew ? 'Uloženo do slovníku.' : 'Změny uloženy.');
+    refreshDictUI(); if(onSaved) onSaved();
+  };
+  if(!entry.tr) run();
+  setTimeout(function(){ (entry.tr ? tr : cs).focus(); }, 30);
+}
+function refreshDictUI(){
+  document.querySelectorAll('.dictlink').forEach(function(a){ a.textContent = 'Slovník ('+dict().length+')'; });
+  highlight(app);
+}
+
+/* underline saved words in question texts; hovering / tapping shows the translation */
+function stemRe(term){
+  var e = term.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+');
+  if(!/\s/.test(term) && term.length>=5){ var cut = term.length>=7 ? 2 : 1; e = e.slice(0, e.length-cut) + '\\p{L}{0,'+(cut+3)+'}'; }
+  try{ return new RegExp('(?<![\\p{L}\\p{N}])'+e+'(?![\\p{L}\\p{N}])', 'giu'); }
+  catch(_){ return new RegExp(e.replace(/\\p\{L\}/g,'[a-zá-žA-ZÁ-Ž]'), 'gi'); }
+}
+function highlight(root){
+  root.querySelectorAll('mark.dw').forEach(function(mk){ mk.replaceWith(document.createTextNode(mk.textContent)); });
+  root.querySelectorAll('.qtext,.opt .tx,.case,.expl').forEach(function(el){ el.normalize(); });
+  var words = dict().filter(function(w){ return w.tr; }).slice().sort(function(a,b){ return b.cs.length-a.cs.length; });
+  if(!words.length) return;
+  var targets = root.querySelectorAll('.qtext,.opt .tx,.case,.expl');
+  words.forEach(function(w){
+    var re = stemRe(w.cs);
+    targets.forEach(function(el){
+      var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {acceptNode:function(n){ return n.parentNode.closest('mark,h2,b') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }});
+      var nodes = []; while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(function(n){
+        var t = n.nodeValue; re.lastIndex = 0; if(!re.test(t)) return;
+        re.lastIndex = 0; var frag = document.createDocumentFragment(), last = 0, m;
+        while((m = re.exec(t))){
+          if(!m[0]) { re.lastIndex++; continue; }
+          frag.appendChild(document.createTextNode(t.slice(last, m.index)));
+          var mk = document.createElement('mark'); mk.className = 'dw'; mk.tabIndex = 0; mk.setAttribute('data-tr', w.tr); mk.title = w.tr; mk.textContent = m[0];
+          frag.appendChild(mk); last = m.index + m[0].length;
+        }
+        frag.appendChild(document.createTextNode(t.slice(last)));
+        n.parentNode.replaceChild(frag, n);
+      });
+    });
+  });
+}
+// run after every screen render + add the dictionary link to top bars
+new MutationObserver(function(){
+  var top = app.querySelector('.top');
+  if(top && !top.querySelector('.dictlink')) top.insertAdjacentHTML('beforeend', dictLinkHtml());
+  if(!app.querySelector('.dictpage')) highlight(app);
+  hideSel();
+}).observe(app, {childList:true});
+
+function viewDict(){
+  var list = dict(), q = viewDict.q || '';
+  var html = '<div class="dictpage"><div class="top"><a class="back" href="#/">‹ Všechny zkoušky</a></div>'+
+    '<h1>Můj slovník</h1>'+
+    '<p class="lead">Slovíčko přidáte tak, že v otázce označíte slovo nebo frázi a kliknete na „+ Do slovníku“. Uložená slova jsou pak v otázkách podtržená a po najetí nebo klepnutí ukážou překlad.</p>'+
+    '<div class="actions" style="margin:0 0 14px"><button class="btn" id="dAdd">+ Přidat ručně</button>'+
+    (list.length ? '<a class="btn primary" href="#/slovnik/karticky">Procvičit kartičky ('+list.length+')</a>' : '')+'</div>'+
+    (list.length ? '<input class="search" id="dQ" type="search" placeholder="Hledat ve slovníku" value="'+esc(q)+'">' : '')+
+    '<div class="words" id="dList"></div></div>';
+  app.innerHTML = html;
+  function draw(){
+    var f = (viewDict.q||'').toLowerCase(), items = list.filter(function(w){ return !f || w.cs.toLowerCase().indexOf(f)>=0 || (w.tr||'').toLowerCase().indexOf(f)>=0; });
+    var el = document.getElementById('dList');
+    if(!list.length){ el.innerHTML = '<div class="empty"><p>Slovník je zatím prázdný. Otevřete libovolnou otázku, označte neznámé slovo a přidejte ho.</p></div>'; return; }
+    el.innerHTML = items.map(function(w){
+      return '<div class="word"><span class="cs">'+esc(w.cs)+'</span><span class="tr">'+(w.tr ? esc(w.tr) : '<span class="muted">bez překladu</span>')+(w.k>=2?' <span class="known">umím</span>':'')+'</span>'+
+        '<span class="btns"><button class="iconbtn" data-edit="'+w.id+'" aria-label="Upravit">Upravit</button><button class="iconbtn" data-del="'+w.id+'" aria-label="Smazat">Smazat</button></span>'+
+        (w.ctx ? '<span class="ex">'+esc(w.ctx)+'</span>' : '')+'</div>';
+    }).join('') || '<p class="muted">Nic nenalezeno.</p>';
+    el.querySelectorAll('[data-edit]').forEach(function(b){ b.onclick = function(){ var w = find(b.getAttribute('data-edit')); if(w) openWordDialog(w, draw); }; });
+    el.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){
+      var w = find(b.getAttribute('data-del')); if(!w || !confirm('Smazat „'+w.cs+'“ ze slovníku?')) return;
+      state.dict = list = list.filter(function(x){ return x!==w; }); save(); viewDict();
+    }; });
+  }
+  function find(id){ return list.filter(function(w){ return w.id===id; })[0]; }
+  draw();
+  var qi = document.getElementById('dQ'); if(qi) qi.oninput = function(){ viewDict.q = this.value; draw(); };
+  document.getElementById('dAdd').onclick = function(){ openWordDialog({cs:''}, viewDict); };
+}
+
+function viewFlash(){
+  var list = dict().filter(function(w){ return w.tr; });
+  if(!list.length){ location.hash = '#/slovnik'; return; }
+  // words you don't know yet come first, shuffled
+  var order = list.slice().sort(function(a,b){ return (a.k||0)-(b.k||0) || Math.random()-.5; });
+  var i = 0, shown = false;
+  function render(){
+    var w = order[i];
+    app.innerHTML = '<div class="dictpage"><div class="top"><a class="back" href="#/slovnik">‹ Slovník</a></div>'+
+      '<div class="qhead"><span class="title">Kartičky</span><span class="muted small">'+(i+1)+' / '+order.length+'</span></div>'+
+      '<div class="flash"><div class="cs">'+esc(w.cs)+'</div>'+
+      (shown ? '<div class="tr">'+esc(w.tr)+'</div>'+(w.ctx?'<div class="ex">'+esc(w.ctx)+'</div>':'') : '')+'</div>'+
+      '<div class="actions">'+(shown
+        ? '<button class="btn" id="fNo">Ještě neumím</button><span class="spacer"></span><button class="btn primary" id="fYes">Umím</button>'
+        : '<button class="btn primary" id="fShow" style="flex:1;justify-content:center">Ukázat překlad</button>')+'</div></div>';
+    var el;
+    if((el = document.getElementById('fShow'))) el.onclick = function(){ shown = true; render(); };
+    if((el = document.getElementById('fYes'))) el.onclick = function(){ w.k = (w.k||0)+1; save(); next(); };
+    if((el = document.getElementById('fNo'))) el.onclick = function(){ w.k = 0; save(); next(); };
+  }
+  function next(){
+    if(i < order.length-1){ i++; shown = false; render(); }
+    else { app.innerHTML = '<div class="dictpage"><div class="top"><a class="back" href="#/slovnik">‹ Slovník</a></div><div class="empty"><p>Prošla jste všechna slovíčka.</p><div class="actions" style="justify-content:center"><a class="btn" href="#/slovnik">Zpět do slovníku</a><button class="btn primary" id="fAgain">Znovu</button></div></div></div>';
+      document.getElementById('fAgain').onclick = viewFlash; }
+  }
+  keyHandler = function(ev){
+    if(document.querySelector('.modal')) return;
+    if(ev.key===' ' || ev.key==='Enter'){ ev.preventDefault(); if(!shown){ shown = true; render(); } else document.getElementById('fYes').click(); }
+  };
+  render();
+}
+
+/* ---------- case study ---------- */
+function viewCase(k, d, ci){
+  var c = d.cases[ci];
+  if(!c){ location.hash = '#/x/'+k+'/types'; return; }
+  var ex = exState(k);
+  var curs = c.qs.map(function(qi){ return {sel:[], checked:false, perm:perm(d.questions[qi].o.length)}; });
+  var done = false;
+  var prevStat = stat(k, c.qs.map(function(qi){ return d.questions[qi].id; }));
+  function render(){
+    var y = window.scrollY;
+    var s = prevStat;
+    var html = '<div class="top"><a class="back" href="#/x/'+k+'/types">‹ '+esc(examMeta(k).short)+'</a></div>'+
+      '<div class="qhead"><span class="title">Případová studie '+(ci+1)+' z '+d.cases.length+'</span>'+
+      (s.a ? '<span class="last '+(s.g===s.n?'ok':'bad')+'">Minule '+s.g+' z '+s.n+' správně</span>' : '')+'</div>'+
+      '<div class="case"><h2>Zadání</h2>'+esc(c.text)+'</div>';
+    c.qs.forEach(function(qi, n){
+      var q = d.questions[qi], cur = curs[n], multi = q.c.length>1;
+      html += '<div class="card cq" id="cq'+n+'"><div class="num">Otázka '+(n+1)+' z '+c.qs.length+'</div>'+
+        '<p class="qtext">'+esc(q.q)+'</p>'+optsHtml(q, cur, multi, 'o'+n)+feedbackHtml(q, cur)+'</div>';
+    });
+    var answered = curs.filter(function(x){ return x.sel.length; }).length;
+    if(done){
+      var ok = curs.filter(function(x){ return x.ok; }).length;
+      html += '<p class="score">Výsledek: '+ok+' z '+c.qs.length+' správně.</p>';
+    }
+    html += '<div class="actions">'+
+      (ci>0 ? '<a class="btn" href="#/x/'+k+'/case/'+(ci-1)+'">‹ Předchozí studie</a>' : '')+
+      (done ? '<button class="btn" id="retry">Zkusit znovu</button>' : '<button class="btn primary" id="checkAll"'+(answered?'':' disabled')+'>Zkontrolovat ('+answered+' / '+c.qs.length+')</button>')+
+      '<span class="spacer"></span>'+
+      (ci<d.cases.length-1 ? '<a class="btn'+(done?' primary':'')+'" href="#/x/'+k+'/case/'+(ci+1)+'">Další studie ›</a>' : '<a class="btn" href="#/x/'+k+'/types">Hotovo</a>')+
+      '</div>';
+    app.innerHTML = html;
+    window.scrollTo(0, y);
+    c.qs.forEach(function(qi, n){
+      var q = d.questions[qi];
+      bindOpts(app, q, curs[n], q.c.length>1, render, 'o'+n);
+    });
+    var el;
+    if((el = document.getElementById('checkAll'))) el.onclick = function(){
+      if(answered < c.qs.length && !confirm('Nezodpověděli jste všech '+c.qs.length+' otázek. Nezodpovězené se započítají jako chyba. Zkontrolovat přesto?')) return;
+      curs.forEach(function(cur, n){
+        var q = d.questions[c.qs[n]];
+        cur.checked = true; cur.ok = sameSet(cur.sel, q.c); record(k, q.id, cur.ok);
+      });
+      done = true; render();
+      var sc = app.querySelector('.score'); if(sc) sc.scrollIntoView({block:'center'});
+    };
+    if((el = document.getElementById('retry'))) el.onclick = function(){
+      curs = c.qs.map(function(qi){ return {sel:[], checked:false, perm:perm(d.questions[qi].o.length)}; });
+      done = false; prevStat = stat(k, c.qs.map(function(qi){ return d.questions[qi].id; })); render(); window.scrollTo(0,0);
+    };
+  }
+  render();
+}
+
+document.addEventListener('keydown', function(ev){ if(keyHandler) keyHandler(ev); });
+route();
+})();
+</script>
+</body>
+</html>
