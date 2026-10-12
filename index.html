@@ -186,6 +186,35 @@ mark.dw:focus{outline:none}
 .flash .cs{font-family:var(--serif);font-size:1.7rem;font-weight:600;line-height:1.25}
 .flash .tr{font-size:1.25rem;color:var(--accent);font-weight:600}
 .flash .ex{font-family:var(--serif);font-size:.9rem;color:var(--muted);max-width:60ch;margin:0 auto}
+.bq{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px 12px;margin-bottom:10px}
+.bq .qid{margin-bottom:6px}
+.bq .qtext{font-size:1.05rem;margin-bottom:10px}
+.ans{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.ans li{display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:start;padding:6px 10px;border-radius:5px;line-height:1.45;white-space:pre-line}
+.ans .l{font-weight:700;font-size:.85rem;color:var(--muted);padding-top:1px}
+.ans li.ok{background:var(--ok-soft);color:var(--ink);font-weight:600;box-shadow:inset 3px 0 0 var(--ok)}
+.ans li.ok .l{color:var(--ok);font-size:0}
+.ans li.ok .l::before{content:"✓";font-size:.95rem}
+.hideans .bq:not(.shown) .ans li.ok .l{font-size:.85rem}
+.hideans .bq:not(.shown) .ans li.ok .l::before{content:none}
+.ans li:not(.ok){color:var(--muted)}
+.bq details{margin-top:8px}
+.bq summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:.9rem;padding:4px 0}
+.bq details .expl{margin-top:6px}
+/* self-test mode: answers hidden until the card is tapped */
+.hideans .bq:not(.shown) .ans li.ok{background:none;box-shadow:none;font-weight:400;color:var(--muted)}
+.hideans .bq:not(.shown) .ans li.ok .l{color:var(--muted)}
+.hideans .bq:not(.shown) details{display:none}
+.hideans .bq{cursor:pointer}
+.hideans .bq:not(.shown)::after{content:"Klepnutím zobrazíte správnou odpověď";display:block;font-size:.8rem;color:var(--accent);font-weight:600;margin-top:8px}
+.bcase{margin:26px 0 12px}
+.pager{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}
+.pager a{min-width:44px;text-align:center;padding:7px 10px;border:1px solid var(--line);border-radius:5px;background:var(--surface);text-decoration:none;color:var(--ink);font-variant-numeric:tabular-nums;font-size:.88rem}
+.pager a[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.btools{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;margin:0 0 12px}
+.btools label{display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:600}
+.btools input{width:18px;height:18px;accent-color:var(--accent)}
+@media print{.top,.tabs,.btools,.pager,.dictlink,#selbtn,.toast{display:none!important}.bq{break-inside:avoid;border-color:#bbb}body{background:#fff}}
 </style>
 </head>
 <body>
@@ -306,6 +335,7 @@ function route(){
     app.innerHTML = '<p class="muted">Načítám otázky…</p>';
     getData(k).then(function(d){
       if(h[2]==='set' && h[3]) return viewSet(k, d, h[3], h[4]!=null ? +h[4] : null);
+      if(h[2]==='browse' && h[3]) return viewBrowse(k, d, h[3], +(h[4]||0));
       if(h[2]==='case' && h[3]!=null) return viewCase(k, d, +h[3]);
       viewExam(k, d, h[2] || 'topics');
     }, function(){
@@ -379,9 +409,10 @@ function viewExam(k, d, tab){
     '<div class="stats"><span><b>'+s.a+'</b> / '+s.n+' zodpovězeno</span><span><b>'+(s.a?Math.round(s.g/s.a*100):0)+' %</b> úspěšnost</span><span><b>'+s.b+'</b> naposledy špatně</span></div>'+
     '<div style="margin:8px 0 4px">'+bar(s)+'</div>'+
     '<nav class="tabs">'+
-      tabLink(k,'topics','Podle témat',tab)+tabLink(k,'types','Podle typu otázek',tab)+tabLink(k,'errors','Opakovat chyby',tab)+
+      tabLink(k,'topics','Podle témat',tab)+tabLink(k,'types','Podle typu otázek',tab)+tabLink(k,'errors','Opakovat chyby',tab)+tabLink(k,'browse','Prohlížení odpovědí',tab)+
     '</nav>';
   if(tab==='types') html += typesTab(k, d);
+  else if(tab==='browse') html += browseTab(k, d);
   else if(tab==='errors') html += errorsTab(k, d);
   else html += topicsTab(k, d);
   html += '<section class="settings"><button class="btn danger" id="resetEx">Smazat postup v této zkoušce</button></section>';
@@ -392,6 +423,82 @@ function viewExam(k, d, tab){
     }
   };
 }
+/* ---------- answer browser ---------- */
+var BROWSE_PAGE = 100;
+var BROWSE_NAMES = {'1':'Otázky s 1 správnou odpovědí','2':'Otázky se 2 správnými odpověďmi','3':'Otázky se 3 správnými odpověďmi','4':'Otázky se 4 správnými odpověďmi','c':'Případové studie'};
+function browseList(d, cat){
+  var out = [];
+  d.questions.forEach(function(q, i){ if(q.t!=='c' && String(q.c.length)===cat) out.push(i); });
+  return out;
+}
+function browseTab(k, d){
+  var html = '<p class="lead">Otázky se správnými odpověďmi pohromadě, jako v PDF, ale rozdělené podle počtu správných odpovědí. Hodí se k učení nazpaměť.</p><div class="rows">';
+  ['1','2','3','4'].forEach(function(cat){
+    var n = browseList(d, cat).length;
+    if(n) html += '<a class="row" href="#/x/'+k+'/browse/'+cat+'"><span class="n">'+BROWSE_NAMES[cat]+'</span><span class="c">'+n+' otázek</span></a>';
+  });
+  html += '<a class="row" href="#/x/'+k+'/browse/c"><span class="n">'+BROWSE_NAMES.c+'</span><span class="c">'+d.cases.length+' studií</span></a>';
+  return html + '</div>';
+}
+function bqHtml(k, d, qi, num){
+  var q = d.questions[qi];
+  var h = '<div class="bq"><div class="qid"><span>'+num+'.</span><span>Otázka č. '+esc(q.id)+'</span></div><p class="qtext">'+esc(q.q)+'</p><ol class="ans">';
+  q.o.forEach(function(o, n){
+    var ok = q.c.indexOf(n)>=0;
+    h += '<li class="'+(ok?'ok':'')+'"><span class="l">'+LETTERS[n]+'</span><span class="tx">'+esc(o)+'</span></li>';
+  });
+  h += '</ol>';
+  if(q.e) h += '<details><summary>Odůvodnění</summary><div class="expl">'+esc(q.e)+'</div></details>';
+  return h + '</div>';
+}
+function viewBrowse(k, d, cat, page){
+  if(!BROWSE_NAMES[cat]){ location.hash = '#/x/'+k+'/browse'; return; }
+  var isCase = cat==='c', units = isCase ? d.cases.map(function(c, i){ return i; }) : browseList(d, cat);
+  var per = isCase ? 10 : BROWSE_PAGE, pages = Math.max(1, Math.ceil(units.length/per));
+  if(!(page>=0 && page<pages)) page = 0;
+  var from = page*per, slice = units.slice(from, from+per);
+  var pager = '';
+  if(pages>1){
+    pager = '<nav class="pager" aria-label="Stránky">';
+    for(var p=0; p<pages; p++){
+      var a = p*per+1, b = Math.min(units.length, (p+1)*per);
+      pager += '<a href="#/x/'+k+'/browse/'+cat+'/'+p+'"'+(p===page?' aria-current="page"':'')+'>'+a+'–'+b+'</a>';
+    }
+    pager += '</nav>';
+  }
+  var hide = !!state.settings.hideAns;
+  var html = '<div class="top"><a class="back" href="#/x/'+k+'/browse">‹ '+esc(examMeta(k).short)+'</a></div>'+
+    '<h1 style="font-size:1.5rem">'+BROWSE_NAMES[cat]+'</h1>'+
+    '<p class="muted">'+units.length+(isCase?' studií':' otázek')+(pages>1?', zobrazeno '+(from+1)+'–'+(from+slice.length):'')+'</p>'+
+    '<div class="btools"><label><input type="checkbox" id="bHide"'+(hide?' checked':'')+'> Skrýt správné odpovědi (zkoušení se)</label>'+
+    '<button class="btn" id="bPrint" type="button">Vytisknout tuto stránku</button></div>'+
+    pager+'<div id="blist"'+(hide?' class="hideans"':'')+'>';
+  if(isCase){
+    slice.forEach(function(ci){
+      var c = d.cases[ci];
+      html += '<div class="case bcase"><h2>Případová studie '+(ci+1)+'</h2>'+esc(c.text)+'</div>';
+      c.qs.forEach(function(qi, n){ html += bqHtml(k, d, qi, n+1); });
+    });
+  } else {
+    slice.forEach(function(qi, n){ html += bqHtml(k, d, qi, from+n+1); });
+  }
+  html += '</div>'+pager;
+  app.innerHTML = html;
+  var list = document.getElementById('blist');
+  document.getElementById('bHide').onchange = function(){
+    state.settings.hideAns = this.checked; save();
+    list.classList.toggle('hideans', this.checked);
+    list.querySelectorAll('.bq.shown').forEach(function(x){ x.classList.remove('shown'); });
+  };
+  document.getElementById('bPrint').onclick = function(){ window.print(); };
+  list.addEventListener('click', function(e){
+    if(!list.classList.contains('hideans')) return;
+    var sel = window.getSelection && window.getSelection();
+    if(sel && sel.toString().trim()) return;
+    var card = e.target.closest('.bq'); if(card) card.classList.add('shown');
+  });
+}
+
 function tabLink(k, id, label, cur){ return '<a href="#/x/'+k+'/'+id+'"'+(cur===id?' aria-current="page"':'')+'>'+label+'</a>'; }
 function topicsTab(k, d){
   var html = '<p class="note">Témata jsou přiřazena automaticky podle obsahu otázek, proto může být občas některá otázka v příbuzném tématu. Případové studie najdete v části Podle typu otázek.</p><div class="rows">';
@@ -594,7 +701,7 @@ function onSelection(){
   if(!text || text.length>200 || !node || !app.contains(node) || node.closest('input,textarea,.dictpage')){ hideSel(); return; }
   var rect = sel.getRangeAt(0).getBoundingClientRect();
   if(!rect.width && !rect.height){ hideSel(); return; }
-  var ctxEl = node.closest('.qtext,.opt,.case,.expl,.row,.snip');
+  var ctxEl = node.closest('.qtext,.opt,.case,.expl,.row,.snip,.ans li');
   var ctx = ctxEl ? ctxEl.textContent.replace(/\s+/g,' ').trim() : '';
   ctx = sentenceAround(ctx, text);
   var h = location.hash.split('/');
@@ -674,10 +781,10 @@ function stemRe(term){
 }
 function highlight(root){
   root.querySelectorAll('mark.dw').forEach(function(mk){ mk.replaceWith(document.createTextNode(mk.textContent)); });
-  root.querySelectorAll('.qtext,.opt .tx,.case,.expl').forEach(function(el){ el.normalize(); });
+  root.querySelectorAll('.qtext,.opt .tx,.case,.expl,.ans .tx').forEach(function(el){ el.normalize(); });
   var words = dict().filter(function(w){ return w.tr; }).slice().sort(function(a,b){ return b.cs.length-a.cs.length; });
   if(!words.length) return;
-  var targets = root.querySelectorAll('.qtext,.opt .tx,.case,.expl');
+  var targets = root.querySelectorAll('.qtext,.opt .tx,.case,.expl,.ans .tx');
   words.forEach(function(w){
     var re = stemRe(w.cs);
     targets.forEach(function(el){
