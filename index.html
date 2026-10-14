@@ -290,7 +290,16 @@ function toast(msg){
   clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('show'); }, 2600);
 }
 function sameSet(a, b){ if(a.length!==b.length) return false; var x=a.slice().sort(), y=b.slice().sort(); for(var i=0;i<x.length;i++) if(x[i]!==y[i]) return false; return true; }
-function perm(n){ var p=[]; for(var i=0;i<n;i++) p.push(i); if(state.settings.shuffle){ for(var j=n-1;j>0;j--){ var k=Math.floor(Math.random()*(j+1)); var t=p[j]; p[j]=p[k]; p[k]=t; } } return p; }
+function orderMode(){ var o = state.settings.order; if(o==='fixed'||o==='random'||o==='pdf') return o; return state.settings.shuffle ? 'random' : 'fixed'; }
+function seeded(str){ var h = 2166136261; for(var i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return function(){ h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h>>>0) % 1000000) / 1000000; }; }
+function perm(n, qid, mode){
+  mode = mode || orderMode();
+  var p=[]; for(var i=0;i<n;i++) p.push(i);
+  if(mode==='pdf') return p;
+  var rnd = mode==='random' ? Math.random : seeded('cnb:'+qid);
+  for(var j=n-1;j>0;j--){ var k=Math.floor(rnd()*(j+1)); var t=p[j]; p[j]=p[k]; p[k]=t; }
+  return p;
+}
 function cp(a){ return a ? a.slice() : null; }
 function plural(n, one, few, many){ return n===1?one:(n>=2&&n<=4?few:many); }
 
@@ -361,7 +370,9 @@ function viewHome(){
   });
   html += '</div>';
   html += '<section class="settings"><h2>Nastavení a postup</h2>'+
-    '<label><input type="checkbox" id="shuf"'+(state.settings.shuffle?' checked':'')+'> Míchat pořadí odpovědí (jako u skutečné zkoušky)</label>'+
+    '<label class="field" style="max-width:420px;display:block;cursor:default"><span>Pořadí odpovědí</span><select id="ord">'+
+      [['fixed','Zamíchané (u každé otázky stále stejně)'],['random','Zamíchané pokaždé jinak'],['pdf','Původní, jako v PDF']].map(function(o){ return '<option value="'+o[0]+'"'+(orderMode()===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+
+    '</select></label>'+
     '<label class="field" style="max-width:320px;display:block;cursor:default"><span>Jazyk překladu ve slovníku</span><select id="lang">'+
       LANGS.map(function(l){ return '<option value="'+l[0]+'"'+(tl()===l[0]?' selected':'')+'>'+l[1]+'</option>'; }).join('')+'</select></label>'+
     '<div class="actions"><button class="btn" id="exp">Stáhnout zálohu postupu</button>'+
@@ -369,7 +380,7 @@ function viewHome(){
     '<button class="btn danger" id="resetAll">Smazat veškerý postup</button></div>'+
     '<p class="small muted">Postup je uložený jen v tomto prohlížeči a zařízení. Záloha se hodí při přechodu na jiný počítač nebo telefon.</p></section>';
   app.innerHTML = html;
-  document.getElementById('shuf').onchange = function(){ state.settings.shuffle = this.checked; save(); };
+  document.getElementById('ord').onchange = function(){ state.settings.order = this.value; delete state.settings.shuffle; save(); };
   document.getElementById('lang').onchange = function(){ state.settings.lang = this.value; save(); };
   document.getElementById('exp').onclick = exportProgress;
   document.getElementById('imp').onchange = importProgress;
@@ -443,9 +454,9 @@ function browseTab(k, d){
 function bqHtml(k, d, qi, num){
   var q = d.questions[qi];
   var h = '<div class="bq"><div class="qid"><span>'+num+'.</span><span>Otázka č. '+esc(q.id)+'</span></div><p class="qtext">'+esc(q.q)+'</p><ol class="ans">';
-  q.o.forEach(function(o, n){
-    var ok = q.c.indexOf(n)>=0;
-    h += '<li class="'+(ok?'ok':'')+'"><span class="l">'+LETTERS[n]+'</span><span class="tx">'+esc(o)+'</span></li>';
+  perm(q.o.length, q.id, orderMode()==='pdf' ? 'pdf' : 'fixed').forEach(function(orig, n){
+    var ok = q.c.indexOf(orig)>=0;
+    h += '<li class="'+(ok?'ok':'')+'"><span class="l">'+LETTERS[n]+'</span><span class="tx">'+esc(q.o[orig])+'</span></li>';
   });
   h += '</ol>';
   if(q.e) h += '<details><summary>Odůvodnění</summary><div class="expl">'+esc(q.e)+'</div></details>';
@@ -568,7 +579,7 @@ function viewSet(k, d, key, startPos){
   }
   function render(){
     var qi = set.list[pos], q = d.questions[qi], multi = q.c.length>1 || q.t==='m';
-    if(!cur.perm) cur.perm = perm(q.o.length);
+    if(!cur.perm) cur.perm = perm(q.o.length, q.id);
     var x = cur.prev;
     var chips = set.list.map(function(i, n){
       var y = ex.r[d.questions[i].id];
@@ -881,7 +892,7 @@ function viewCase(k, d, ci){
   var c = d.cases[ci];
   if(!c){ location.hash = '#/x/'+k+'/types'; return; }
   var ex = exState(k);
-  var curs = c.qs.map(function(qi){ return {sel:[], checked:false, perm:perm(d.questions[qi].o.length)}; });
+  var curs = c.qs.map(function(qi){ return {sel:[], checked:false, perm:perm(d.questions[qi].o.length, d.questions[qi].id)}; });
   var done = false;
   var prevStat = stat(k, c.qs.map(function(qi){ return d.questions[qi].id; }));
   function render(){
@@ -924,7 +935,7 @@ function viewCase(k, d, ci){
       var sc = app.querySelector('.score'); if(sc) sc.scrollIntoView({block:'center'});
     };
     if((el = document.getElementById('retry'))) el.onclick = function(){
-      curs = c.qs.map(function(qi){ return {sel:[], checked:false, perm:perm(d.questions[qi].o.length)}; });
+      curs = c.qs.map(function(qi){ return {sel:[], checked:false, perm:perm(d.questions[qi].o.length, d.questions[qi].id)}; });
       done = false; prevStat = stat(k, c.qs.map(function(qi){ return d.questions[qi].id; })); render(); window.scrollTo(0,0);
     };
   }
