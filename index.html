@@ -215,6 +215,8 @@ mark.dw:focus{outline:none}
 .btools label{display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:600}
 .btools input{width:18px;height:18px;accent-color:var(--accent)}
 @media print{.top,.tabs,.btools,.pager,.dictlink,#selbtn,.toast{display:none!important}.bq{break-inside:avoid;border-color:#bbb}body{background:#fff}}
+.typestats{margin:0 0 12px}
+.typestats .stats b{font-size:1.05rem}
 </style>
 </head>
 <body>
@@ -413,12 +415,15 @@ function importProgress(ev){
 }
 
 /* ---------- exam overview ---------- */
+function statsBlock(s, extra){
+  return '<div class="stats"><span><b>'+s.a+'</b> / '+s.n+' zodpovězeno</span><span><b>'+(s.a?Math.round(s.g/s.a*100):0)+' %</b> úspěšnost</span><span><b>'+s.b+'</b> naposledy špatně</span>'+(extra||'')+'</div>'+
+    '<div style="margin:8px 0 4px">'+bar(s)+'</div>';
+}
 function viewExam(k, d, tab){
   var e = examMeta(k), allIds = d.questions.map(function(q){ return q.id; }), s = stat(k, allIds);
   var html = '<div class="top"><a class="back" href="#/">‹ Všechny zkoušky</a></div>'+
     '<h1>'+esc(e.title)+'</h1>'+
-    '<div class="stats"><span><b>'+s.a+'</b> / '+s.n+' zodpovězeno</span><span><b>'+(s.a?Math.round(s.g/s.a*100):0)+' %</b> úspěšnost</span><span><b>'+s.b+'</b> naposledy špatně</span></div>'+
-    '<div style="margin:8px 0 4px">'+bar(s)+'</div>'+
+    statsBlock(s)+
     '<nav class="tabs">'+
       tabLink(k,'topics','Podle témat',tab)+tabLink(k,'types','Podle typu otázek',tab)+tabLink(k,'errors','Opakovat chyby',tab)+tabLink(k,'browse','Prohlížení odpovědí',tab)+
     '</nav>';
@@ -526,14 +531,20 @@ function typesTab(k, d){
     var all = typeIdx(d, t);
     html += '<h2>'+TYPE_NAMES[t]+' <span class="muted small">('+all.length+' otázek)</span></h2>';
     if(!all.length){ html += '<p class="note">V této zkoušce nejsou otázky s více správnými odpověďmi.</p>'; return; }
-    html += '<div class="tiles">';
+    html += '<div class="typestats">'+statsBlock(stat(k, all.map(function(i){ return d.questions[i].id; })))+'</div><div class="tiles">';
     for(var b=0; b*BLOCK<all.length; b++){
       var sl = all.slice(b*BLOCK, (b+1)*BLOCK), s = stat(k, sl.map(function(i){ return d.questions[i].id; }));
       html += '<a class="tile" href="#/x/'+k+'/set/'+t+'-'+b+'"><div class="t">Blok '+(b+1)+'</div><div class="s">otázky '+(b*BLOCK+1)+'–'+(b*BLOCK+sl.length)+'<br>'+s.g+' správně z '+s.n+'</div>'+bar(s)+'</a>';
     }
     html += '</div>';
   });
-  html += '<h2>'+TYPE_NAMES.c+' <span class="muted small">('+d.cases.length+' studií, vždy 5 otázek)</span></h2><div class="tiles cases">';
+  var caseIds = [], caseDone = 0;
+  d.cases.forEach(function(c){
+    var ids = c.qs.map(function(qi){ return d.questions[qi].id; }); caseIds = caseIds.concat(ids);
+    if(stat(k, ids).a===ids.length) caseDone++;
+  });
+  html += '<h2>'+TYPE_NAMES.c+' <span class="muted small">('+d.cases.length+' studií, vždy 5 otázek)</span></h2>'+
+    '<div class="typestats">'+statsBlock(stat(k, caseIds), '<span><b>'+caseDone+'</b> / '+d.cases.length+' studií hotovo</span>')+'</div><div class="tiles cases">';
   d.cases.forEach(function(c, i){
     var s = stat(k, c.qs.map(function(qi){ return d.questions[qi].id; }));
     html += '<a class="tile" href="#/x/'+k+'/case/'+i+'"><div class="t">Studie '+(i+1)+'</div><div class="snip">'+esc(c.text.slice(0,160))+'</div><div class="s">'+s.g+' / 5 správně</div>'+bar(s)+'</a>';
